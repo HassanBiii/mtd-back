@@ -157,36 +157,12 @@ def webhook_trade():
 # ----------------- Webhook GET-----------------
 @app.route("/webhook/trade", methods=["GET"])
 def webhook_trade_get():
-    trades = Trade.query.all()
-    # trades = jsonify([trade.to_dict() for trade in trades])
-    history = []
-    for t in trades:
-        # شبیه<200c>سازی فرمت ایونت SSE برای سوابق دیتابیس
-        # اگر تاریخ بسته شدن دارد، اکشن را close در نظر می<200c>گیریم، وگرنه open
-        action_status = "close" if t.closed_at else "open"
-
-        # محاسبه PnL برای هر ردیف
-        pnl = t.realized_pnl()
-
-        history.append({
-            "ts": t.opened_at.timestamp() * 1000,
-            "trade_id": t.id,
-            "action": action_status,
-            "symbol": t.symbol,
-            "side": t.side,
-            "quantity": t.quantity,
-            "entry_price": t.entry_price,
-            "exit_price": t.exit_price if t.exit_price else 0.0,
-            # در فرانت از فیلد price استفاده شده، آن را با قیمت خروج (یا ورود) پر می<200c>کنیم
-            "price": t.exit_price if t.exit_price else t.entry_price,
-            "commission": t.commission,
-            "realized_pnl": pnl
-        })
-    return jsonify(history)
-
+  trades = Trade.query.all()
+  return jsonify([trade.to_dict() for trade in trades])
+	
 # ----------------- Run -----------------
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5000)
-
+    #app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", port=8080)
