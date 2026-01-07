@@ -155,11 +155,36 @@ def webhook_trade():
     notify_subscribers(event)
     return jsonify({"status": "ok", "action": trade_event_type}), 200
 # ----------------- Webhook GET-----------------
+# return jsonify([trade.to_dict() for trade in trades])
 @app.route("/webhook/trade", methods=["GET"])
 def webhook_trade_get():
-  trades = Trade.query.all()
-  return jsonify([trade.to_dict() for trade in trades])
-	
+    trades = Trade.query.all()
+    history = []
+    for t in trades:
+        # شبیه‌سازی فرمت ایونت SSE برای سوابق دیتابیس
+        # اگر تاریخ بسته شدن دارد، اکشن را close در نظر می‌گیریم، وگرنه open
+        action_status = "close" if t.closed_at else "open"
+        
+        # محاسبه PnL برای هر ردیف
+        pnl = t.realized_pnl()
+        
+        history.append({
+            "ts": t.opened_at.timestamp() * 1000,
+            "trade_id": t.id,
+            "action": action_status,
+            "symbol": t.symbol,
+            "side": t.side,
+            "quantity": t.quantity,
+            "entry_price": t.entry_price,
+            "exit_price": t.exit_price if t.exit_price else 0.0,
+            # در فرانت از فیلد price استفاده شده، آن را با قیمت خروج (یا ورود) پر می‌کنیم
+            "price": t.exit_price if t.exit_price else t.entry_price,
+            "commission": t.commission,
+            "realized_pnl": pnl
+        })
+    return jsonify(history)
+  	
+
 # ----------------- Run -----------------
 if __name__ == "__main__":
     with app.app_context():
